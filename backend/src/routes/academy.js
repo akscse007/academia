@@ -1,7 +1,7 @@
 import express from 'express';
 import prisma from '../lib/prisma.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
-import { uploader, fileUrl } from '../middleware/upload.js';
+import { memoryImageUploader, fileToDataUrl } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -62,14 +62,14 @@ router.post(
   '/me/logo',
   authenticate,
   requireRole('teacher'),
-  uploader('logos', { imagesOnly: true, max: 5 }).single('file'),
+  memoryImageUploader(2).single('file'),
   async (req, res, next) => {
     try {
       if (!req.file) return res.status(400).json({ message: 'No file' });
-      const url = fileUrl(req, req.file);
+      const dataUrl = fileToDataUrl(req.file);
       const a = await prisma.academy.update({
         where: { id: req.user.academyId },
-        data: { logoUrl: url },
+        data: { logoUrl: dataUrl },
       });
       res.json({ logoUrl: a.logoUrl });
     } catch (err) {
@@ -82,14 +82,14 @@ router.post(
   '/me/qr',
   authenticate,
   requireRole('teacher'),
-  uploader('qr', { imagesOnly: true, max: 5 }).single('file'),
+  memoryImageUploader(2).single('file'),
   async (req, res, next) => {
     try {
       if (!req.file) return res.status(400).json({ message: 'No file' });
-      const url = fileUrl(req, req.file);
+      const dataUrl = fileToDataUrl(req.file);
       const a = await prisma.academy.update({
         where: { id: req.user.academyId },
-        data: { paymentQrUrl: url },
+        data: { paymentQrUrl: dataUrl },
       });
       res.json({ paymentQrUrl: a.paymentQrUrl });
     } catch (err) {
@@ -101,7 +101,9 @@ router.post(
 router.get('/me/summary', authenticate, requireRole('teacher'), async (req, res, next) => {
   try {
     const academyId = req.user.academyId;
-    const [totalStudents, pendingStudents, activeBatches, totalMaterials, collectedAgg, outstandingAgg] =
+    const currentMonth = new Date().toISOString().slice(0, 7);
+
+    const [totalStudents, pendingStudents, activeBatches, totalMaterials, collectedAgg, enrollments, successfulThisMonth] =
       await Promise.all([
         prisma.user.count({ where: { academyId, role: 'student', status: 'active' } }),
         prisma.user.count({ where: { academyId, role: 'student', status: 'pending' } }),
@@ -111,18 +113,68 @@ router.get('/me/summary', authenticate, requireRole('teacher'), async (req, res,
           where: { academyId, status: 'successful' },
           _sum: { amount: true },
         }),
-        prisma.payment.aggregate({
-          where: { academyId, status: { in: ['pending', 'awaiting_verification'] } },
-          _sum: { amount: true },
+        prisma.enrollment.findMany({
+          where: {
+            academyId,
+            status: 'active',
+            batch: { status: 'active' },
+            student: { status: 'active' },
+          },
+          include: { batch: { select: { monthlyFee: true } } },
+        }),
+        prisma.payment.findMany({
+          where: {
+            academyId,
+            forMonth: currentMonth,
+            type: 'monthly',
+            status: { in: ['successful', 'awaiting_verification'] },
+          },
+          select: { studentId: true, batchId: true, status: true, amount: true },
         }),
       ]);
+
+    // Index: key `<studentId>:<batchId>` → best status
+    const rank = { successful: 2, awaiting_verification: 1 };
+    const payIdx = {};
+    for (const p of successfulThisMonth) {
+      const key = `${p.studentId}:${p.batchId}`;
+      const cur = payIdx[key];
+      if (!cur || (rank[p.status] || 0) > (rank[cur.status] || 0)) payIdx[key] = p;
+    }
+
+    let currentMonthExpected = 0;
+    let currentMonthCollected = 0;
+    let currentMonthOutstanding = 0;
+    let studentsOutstandingSet = new Set();
+
+    for (const e of enrollments) {
+      const fee = Math.max(
+        0,
+        Number(e.monthlyFeeOverride ?? e.batch.monthlyFee) - Number(e.discount || 0)
+      );
+      if (fee <= 0) continue;
+      currentMonthExpected += fee;
+      const hit = payIdx[`${e.studentId}:${e.batchId}`];
+      if (hit?.status === 'successful') currentMonthCollected += Number(hit.amount);
+      else {
+        currentMonthOutstanding += fee;
+        studentsOutstandingSet.add(e.studentId);
+      }
+    }
+
     res.json({
       totalStudents,
       pendingStudents,
       activeBatches,
       totalMaterials,
       collected: Number(collectedAgg._sum.amount || 0),
-      outstanding: Number(outstandingAgg._sum.amount || 0),
+      // Legacy field: now equals currentMonthOutstanding so existing UI shows it
+      outstanding: currentMonthOutstanding,
+      currentMonth,
+      currentMonthExpected,
+      currentMonthCollected,
+      currentMonthOutstanding,
+      studentsOutstanding: studentsOutstandingSet.size,
     });
   } catch (err) {
     next(err);

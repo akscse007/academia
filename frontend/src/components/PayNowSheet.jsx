@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../api/client';
 import { assetUrl } from '../utils/assetUrl';
-import { X, Copy, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { X, Copy, ExternalLink, CheckCircle2, QrCode, Smartphone } from 'lucide-react';
 
 export default function PayNowSheet({
   batch, academy, type = 'monthly', month, monthLabel, amount, onClose, onDone,
@@ -120,13 +120,37 @@ export default function PayNowSheet({
               </div>
             </div>
 
+            {/* Auto-generated UPI QR with exact amount pre-filled */}
+            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white p-4">
+              <p className="text-xs font-medium text-slate-700 dark:text-slate-300 text-center mb-2 flex items-center justify-center gap-1">
+                <QrCode className="h-3 w-3" /> Scan with any UPI app
+              </p>
+              <div className="flex justify-center">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=10&data=${encodeURIComponent(upiUrl)}`}
+                  alt="UPI QR"
+                  className="w-48 h-48 sm:w-56 sm:h-56"
+                />
+              </div>
+              <p className="text-[11px] text-slate-500 text-center mt-2">
+                ₹{payment.amount} · Amount is pre-filled in the app after scanning
+              </p>
+            </div>
+
+            <div className="relative text-center">
+              <span className="absolute inset-x-0 top-1/2 h-px bg-slate-200 dark:bg-slate-700" />
+              <span className="relative inline-block bg-white dark:bg-slate-900 px-2 text-xs text-slate-400 uppercase tracking-wider">
+                or on this phone
+              </span>
+            </div>
+
             <a href={upiUrl} className="btn-primary w-full justify-center">
-              Open UPI app <ExternalLink className="h-4 w-4" />
+              <Smartphone className="h-4 w-4" /> Open UPI app <ExternalLink className="h-4 w-4" />
             </a>
 
             {academy?.paymentQrUrl && (
               <details className="rounded-xl border border-slate-200 dark:border-slate-700">
-                <summary className="px-4 py-3 text-sm font-medium cursor-pointer">Or scan QR code</summary>
+                <summary className="px-4 py-3 text-sm font-medium cursor-pointer">Academy's saved QR</summary>
                 <div className="p-4 flex justify-center">
                   <img src={assetUrl(academy.paymentQrUrl)} alt="QR" className="w-48 h-48 rounded-lg border" />
                 </div>

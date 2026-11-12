@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
 import StatCard from '../../components/StatCard';
-import { Users, UserCheck, BookOpen, FileText, Wallet, AlertCircle } from 'lucide-react';
+import { Users, UserCheck, BookOpen, FileText, Wallet, AlertCircle, Clock, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import ShareLinks from '../../components/ShareLinks';
@@ -22,13 +22,44 @@ export default function TeacherDashboard() {
         <h1 className="text-2xl font-bold">Welcome, {user?.name}</h1>
         <p className="text-sm text-slate-500">{academy?.welcomeMessage}</p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Current month highlight — what needs attention NOW */}
+      <div className="card p-5 bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/20 dark:to-slate-900 border-l-4 border-amber-500">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
+              <Clock className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-amber-700 dark:text-amber-300 font-semibold">
+                Current month dues ({stats.currentMonth || '—'})
+              </p>
+              <p className="text-2xl sm:text-3xl font-extrabold mt-1">
+                ₹{(stats.currentMonthOutstanding || 0).toLocaleString()}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                {stats.studentsOutstanding || 0} student{stats.studentsOutstanding === 1 ? '' : 's'} haven't paid for this month yet
+              </p>
+            </div>
+          </div>
+          <div className="text-right text-sm">
+            <p className="text-slate-500">Collected this month</p>
+            <p className="text-lg font-bold text-emerald-600">
+              ₹{(stats.currentMonthCollected || 0).toLocaleString()}
+            </p>
+            <p className="text-xs text-slate-400">
+              of ₹{(stats.currentMonthExpected || 0).toLocaleString()} expected
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <StatCard icon={Users} label="Active students" value={stats.totalStudents || 0} />
         <StatCard icon={UserCheck} label="Pending approvals" value={stats.pendingStudents || 0} />
         <StatCard icon={BookOpen} label="Active batches" value={stats.activeBatches || 0} />
         <StatCard icon={FileText} label="Study materials" value={stats.totalMaterials || 0} />
-        <StatCard icon={Wallet} label="Collected" value={`₹${(stats.collected || 0).toLocaleString()}`} />
-        <StatCard icon={AlertCircle} label="Outstanding" value={`₹${(stats.outstanding || 0).toLocaleString()}`} />
+        <StatCard icon={TrendingUp} label="All-time collected" value={`₹${(stats.collected || 0).toLocaleString()}`} />
+        <StatCard icon={AlertCircle} label="This-month dues" value={`₹${(stats.currentMonthOutstanding || 0).toLocaleString()}`} />
       </div>
       <ShareLinks academy={academy} />
 

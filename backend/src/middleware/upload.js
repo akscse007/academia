@@ -5,6 +5,25 @@ import fs from 'fs';
 const uploadsDir = path.resolve(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
+// In-memory upload for small images we store as base64 data URLs in the DB.
+// Render's filesystem is ephemeral, so disk files vanish on redeploy. For
+// logos / QR / avatar images (small) we persist them directly in Postgres.
+export function memoryImageUploader(maxMB = 2) {
+  return multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: maxMB * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      if (!file.mimetype.startsWith('image/')) return cb(new Error('Only image uploads allowed'));
+      cb(null, true);
+    },
+  });
+}
+
+export function fileToDataUrl(file) {
+  if (!file) return '';
+  return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+}
+
 function diskStorage(folder) {
   const dir = path.join(uploadsDir, folder);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });

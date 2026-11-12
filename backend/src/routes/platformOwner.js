@@ -1,6 +1,7 @@
 import express from 'express';
 import prisma from '../lib/prisma.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { memoryImageUploader, fileToDataUrl } from '../middleware/upload.js';
 
 const router = express.Router();
 router.use(authenticate, requireRole('platform_owner'));
@@ -92,6 +93,23 @@ router.get('/developer', async (_req, res) => {
   if (!d) d = await prisma.developer.create({ data: {} });
   res.json(d);
 });
+
+router.post(
+  '/developer/photo',
+  memoryImageUploader(2).single('file'),
+  async (req, res, next) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: 'No file' });
+      const dataUrl = fileToDataUrl(req.file);
+      let d = await prisma.developer.findFirst();
+      if (!d) d = await prisma.developer.create({ data: { photoUrl: dataUrl } });
+      else d = await prisma.developer.update({ where: { id: d.id }, data: { photoUrl: dataUrl } });
+      res.json({ photoUrl: d.photoUrl });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.put('/developer', async (req, res, next) => {
   try {

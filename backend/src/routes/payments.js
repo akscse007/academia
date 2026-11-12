@@ -112,7 +112,11 @@ router.post('/initiate', async (req, res, next) => {
     }
     if (!amount || amount <= 0) return res.status(400).json({ message: 'No fee configured' });
 
-    const reference = `${academy.slug.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)}-${nano()}`;
+    // NPCI UPI spec: `tr` (transaction reference) must be alphanumeric A-Z 0-9
+    // only, max 35 chars. NO hyphens, slashes or special chars — Google Pay /
+    // PhonePe silently reject these with a generic "check bank limits" error.
+    const slugCode = academy.slug.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'ACADEMY';
+    const reference = `${slugCode}${nano()}`.replace(/[^A-Z0-9]/gi, '').slice(0, 35);
 
     const payment = await prisma.payment.create({
       data: {
@@ -127,9 +131,30 @@ router.post('/initiate', async (req, res, next) => {
       },
     });
 
-    const payeeName = encodeURIComponent(academy.name);
-    const txnNote = encodeURIComponent(`${batch.name} ${type} fee - ${reference}`);
-    const upiUrl = `upi://pay?pa=${encodeURIComponent(academy.upiId)}&pn=${payeeName}&am=${amount}&cu=INR&tn=${txnNote}&tr=${reference}`;
+    // Build a strictly spec-compliant UPI intent URL.
+    // - pn / tn: alphanumeric + space only, trimmed
+    // - am:      two-decimal-places string
+    // - tr:      alphanumeric-only, ≤35 chars
+    // - cu:      INR
+    const cleanText = (s, max) =>
+      String(s || '').replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, ' ').trim().slice(0, max);
+    const payeeName = cleanText(academy.name, 50) || 'Academy';
+    const noteSource = type === 'admission'
+      ? `${batch.name} admission`
+      : `${batch.name} ${forMonth || new Date().toISOString().slice(0, 7)}`;
+    const txnNote = cleanText(noteSource, 50);
+    const amountStr = Number(amount).toFixed(2);
+
+    // Use RFC 3986 percent-encoding (spaces as %20, not +). Some UPI apps
+    // display `+` literally and the payment fails.
+    const enc = (s) => encodeURIComponent(s);
+    const upiUrl =
+      `upi://pay?pa=${enc(academy.upiId)}` +
+      `&pn=${enc(payeeName)}` +
+      `&am=${amountStr}` +
+      `&cu=INR` +
+      `&tn=${enc(txnNote)}` +
+      `&tr=${reference}`;
 
     res.status(201).json({
       payment,
