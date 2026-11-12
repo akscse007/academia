@@ -31,6 +31,7 @@ import TeacherSettings from './pages/teacher/TeacherSettings';
 import StudentLayout from './layouts/StudentLayout';
 import StudentDashboard from './pages/student/StudentDashboard';
 import StudentBatches from './pages/student/StudentBatches';
+import StudentBatchDetail from './pages/student/StudentBatchDetail';
 import StudentNotes from './pages/student/StudentNotes';
 import StudentNoteViewer from './pages/student/StudentNoteViewer';
 import StudentFees from './pages/student/StudentFees';
@@ -114,6 +115,7 @@ export default function App() {
       >
         <Route path="dashboard" element={<StudentDashboard />} />
         <Route path="batches" element={<StudentBatches />} />
+        <Route path="batches/:id" element={<StudentBatchDetail />} />
         <Route path="notes" element={<StudentNotes />} />
         <Route path="notes/:id" element={<StudentNoteViewer />} />
         <Route path="fees" element={<StudentFees />} />

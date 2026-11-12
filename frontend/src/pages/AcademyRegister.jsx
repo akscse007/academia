@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import api from '../api/client';
 import { useBranding } from '../context/BrandingContext';
 import Loader from '../components/Loader';
+import { assetUrl } from '../utils/assetUrl';
 
 export default function AcademyRegister() {
   const { slug } = useParams();
@@ -50,7 +51,7 @@ export default function AcademyRegister() {
       <div className="w-full max-w-xl">
         <div className="flex flex-col items-center text-center mb-6">
           {academy.logoUrl ? (
-            <img src={academy.logoUrl} alt="" className="h-16 w-16 rounded-2xl object-cover" />
+            <img src={assetUrl(academy.logoUrl)} alt="" className="h-16 w-16 rounded-2xl object-cover" />
           ) : (
             <div className="h-16 w-16 rounded-2xl bg-brand text-white text-2xl font-bold flex items-center justify-center">
               {academy.name[0]}

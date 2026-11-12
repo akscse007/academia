@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../../api/client';
 import EmptyState from '../../components/EmptyState';
-import { FileText } from 'lucide-react';
+import { FileText, ChevronRight, Lock } from 'lucide-react';
 
 export default function StudentNotes() {
   const { slug } = useParams();
@@ -19,25 +19,33 @@ export default function StudentNotes() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Study materials</h1>
+      <h1 className="text-xl sm:text-2xl font-bold">Study materials</h1>
       {Object.entries(groups).map(([folder, items]) => (
         <section key={folder}>
-          <h2 className="text-sm font-semibold uppercase text-slate-500">{folder}</h2>
-          <div className="mt-2 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <h2 className="text-xs font-semibold uppercase text-slate-500 mb-2 tracking-wide">{folder}</h2>
+          <div className="grid gap-2 sm:grid-cols-2">
             {items.map((n) => (
-              <Link key={n.id} to={`/a/${slug}/notes/${n.id}`}
-                className="card p-4 hover:shadow-lg transition flex items-start gap-3">
-                <div className="h-10 w-10 bg-brand/10 text-brand rounded-lg flex items-center justify-center">
+              <Link
+                key={n.id}
+                to={`/a/${slug}/notes/${n.id}`}
+                className="card p-4 hover:shadow-md transition flex items-center gap-3 group"
+              >
+                <div className="h-10 w-10 bg-brand/10 text-brand rounded-xl flex items-center justify-center shrink-0">
                   <FileText className="h-5 w-5" />
                 </div>
-                <div className="min-w-0">
-                  <p className="font-medium truncate">{n.title}</p>
-                  <p className="text-xs text-slate-500 truncate">{n.description}</p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {(n.fileSize / 1024 / 1024).toFixed(2)} MB
-                    {n.recordingPermission ? ' • recording allowed' : ''}
-                  </p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-sm truncate">{n.title}</p>
+                  {n.description && (
+                    <p className="text-xs text-slate-500 truncate">{n.description}</p>
+                  )}
+                  <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
+                    <span>{(n.fileSize / 1024 / 1024).toFixed(2)} MB</span>
+                    {!n.recordingPermission && (
+                      <span className="flex items-center gap-1"><Lock className="h-3 w-3" />protected</span>
+                    )}
+                  </div>
                 </div>
+                <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-brand shrink-0" />
               </Link>
             ))}
           </div>

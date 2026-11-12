@@ -20,7 +20,7 @@ export default function StudentLayout() {
       <Sidebar title={academy?.name || 'Student'} logoUrl={academy?.logoUrl} items={items} />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar subtitle="Student portal" />
-        <main className="flex-1 p-4 lg:p-8">
+        <main className="flex-1 p-3 sm:p-4 lg:p-8">
           <Outlet />
         </main>
       </div>

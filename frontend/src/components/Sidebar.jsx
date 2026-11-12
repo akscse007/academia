@@ -2,6 +2,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { assetUrl } from '../utils/assetUrl';
 
 export default function Sidebar({ title, logoUrl, items = [] }) {
   const { logout } = useAuth();
@@ -45,7 +46,7 @@ export default function Sidebar({ title, logoUrl, items = [] }) {
       >
         <div className="px-5 py-5 flex items-center gap-3 border-b border-slate-100 dark:border-slate-800">
           {logoUrl ? (
-            <img src={logoUrl} alt="" className="h-10 w-10 rounded-lg object-cover bg-slate-100 shrink-0" />
+            <img src={assetUrl(logoUrl)} alt="" className="h-10 w-10 rounded-lg object-cover bg-slate-100 shrink-0" />
           ) : (
             <div className="h-10 w-10 rounded-lg bg-brand text-white font-bold flex items-center justify-center shrink-0">
               {title?.[0] || 'A'}

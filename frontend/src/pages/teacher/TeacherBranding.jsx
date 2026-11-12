@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useBranding } from '../../context/BrandingContext';
+import { assetUrl } from '../../utils/assetUrl';
 
 export default function TeacherBranding() {
   const { academy, refresh } = useAuth();
@@ -56,7 +57,7 @@ export default function TeacherBranding() {
       <div className="card p-6 space-y-4">
         <div className="flex items-center gap-4">
           {academy?.logoUrl ? (
-            <img src={academy.logoUrl} alt="" className="h-16 w-16 rounded-xl object-cover" />
+            <img src={assetUrl(academy.logoUrl)} alt="" className="h-16 w-16 rounded-xl object-cover" />
           ) : (
             <div className="h-16 w-16 rounded-xl bg-brand text-white text-2xl font-bold flex items-center justify-center">
               {academy?.name?.[0]}

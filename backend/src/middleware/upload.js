@@ -32,13 +32,18 @@ export function uploader(folder, { imagesOnly = false, max = 25 } = {}) {
   });
 }
 
-export function fileUrl(req, file) {
+export function fileUrl(_req, file) {
+  // Return a RELATIVE URL so the browser resolves it against whatever origin
+  // served the page. This keeps uploads working if the hosting domain
+  // changes (e.g. moved from academia-aks → academia-ufst).
   const folder = path.basename(path.dirname(file.path));
-  return `${req.protocol}://${req.get('host')}/uploads/${folder}/${file.filename}`;
+  return `/uploads/${folder}/${file.filename}`;
 }
 
 export function fileLocalPath(fileUrlStr) {
-  const rel = fileUrlStr.split('/uploads/')[1];
+  if (!fileUrlStr) return null;
+  const parts = fileUrlStr.split('/uploads/');
+  const rel = parts[parts.length - 1];
   if (!rel) return null;
   return path.resolve(process.cwd(), 'uploads', rel);
 }

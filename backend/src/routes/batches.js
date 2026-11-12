@@ -100,7 +100,34 @@ router.get('/:id', async (req, res, next) => {
         where: { studentId: req.user.id, batchId: b.id, status: 'active' },
       });
       if (!enrolled) return res.status(403).json({ message: 'Not enrolled' });
-      return res.json(b);
+      const [notes, payments, totalEnrolled] = await Promise.all([
+        prisma.note.findMany({
+          where: {
+            academyId: req.user.academyId,
+            published: true,
+            batches: { some: { batchId: b.id } },
+          },
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, title: true, description: true, folder: true, fileSize: true, createdAt: true, recordingPermission: true },
+        }),
+        prisma.payment.findMany({
+          where: { studentId: req.user.id, batchId: b.id },
+          orderBy: { createdAt: 'desc' },
+          take: 24,
+        }),
+        prisma.enrollment.count({ where: { batchId: b.id, status: 'active' } }),
+      ]);
+      const effectiveMonthlyFee = Number(enrolled.monthlyFeeOverride ?? b.monthlyFee) - Number(enrolled.discount || 0);
+      const effectiveAdmissionFee = Number(enrolled.admissionFeeOverride ?? b.admissionFee);
+      return res.json({
+        ...b,
+        enrollment: enrolled,
+        effectiveMonthlyFee,
+        effectiveAdmissionFee,
+        notes,
+        payments,
+        totalEnrolled,
+      });
     }
     const enrollments = await prisma.enrollment.findMany({
       where: { batchId: b.id, status: 'active' },

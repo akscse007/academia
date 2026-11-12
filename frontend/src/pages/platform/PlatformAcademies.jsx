@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../api/client';
 import EmptyState from '../../components/EmptyState';
+import { assetUrl } from '../../utils/assetUrl';
 
 const STATUS = ['pending', 'active', 'suspended', 'deactivated'];
 
@@ -45,7 +46,7 @@ export default function PlatformAcademies() {
           <div key={a.id} className="card p-5 flex flex-col lg:flex-row gap-4 lg:items-center justify-between">
             <div className="flex items-center gap-4">
               {a.logoUrl ? (
-                <img src={a.logoUrl} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                <img src={assetUrl(a.logoUrl)} alt="" className="h-12 w-12 rounded-lg object-cover" />
               ) : (
                 <div className="h-12 w-12 rounded-lg bg-brand text-white font-bold flex items-center justify-center">{a.name[0]}</div>
               )}

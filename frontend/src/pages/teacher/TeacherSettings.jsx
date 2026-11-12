@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { assetUrl } from '../../utils/assetUrl';
 
 export default function TeacherSettings() {
   const { academy, refresh } = useAuth();
@@ -66,7 +67,7 @@ export default function TeacherSettings() {
           <div>
             <label className="label">Payment QR code</label>
             <div className="flex items-center gap-3">
-              {academy?.paymentQrUrl && <img src={academy.paymentQrUrl} alt="" className="h-16 w-16 rounded border" />}
+              {academy?.paymentQrUrl && <img src={assetUrl(academy.paymentQrUrl)} alt="" className="h-16 w-16 rounded border" />}
               <label className="btn-outline text-xs cursor-pointer">
                 Upload QR
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadQr(e.target.files[0])} />
