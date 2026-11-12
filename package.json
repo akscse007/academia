@@ -1,0 +1,14 @@
+{
+  "name": "student-saas",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Multi-tenant student management SaaS (MERN)",
+  "scripts": {
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "seed": "npm --prefix backend run seed",
+    "dev:api": "npm --prefix backend run dev",
+    "dev:web": "npm --prefix frontend run dev",
+    "build:web": "npm --prefix frontend run build",
+    "start:api": "npm --prefix backend start"
+  }
+}

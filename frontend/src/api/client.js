@@ -1,0 +1,25 @@
+import axios from 'axios';
+
+const api = axios.create({ baseURL: '/api' });
+
+api.interceptors.request.use((cfg) => {
+  const token = localStorage.getItem('token');
+  if (token) cfg.headers.Authorization = `Bearer ${token}`;
+  return cfg;
+});
+
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    const status = err.response?.status;
+    if (status === 401) {
+      localStorage.removeItem('token');
+      if (!location.pathname.startsWith('/login') && !location.pathname.startsWith('/a/')) {
+        location.href = '/login';
+      }
+    }
+    return Promise.reject(err);
+  }
+);
+
+export default api;

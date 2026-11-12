@@ -1,0 +1,317 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  platform_owner
+  teacher
+  student
+}
+
+enum UserStatus {
+  pending
+  active
+  rejected
+  suspended
+}
+
+enum AcademyStatus {
+  pending
+  active
+  suspended
+  deactivated
+}
+
+enum BatchStatus {
+  active
+  archived
+}
+
+enum PaymentType {
+  monthly
+  admission
+  custom
+  late_fee
+}
+
+enum PaymentStatus {
+  pending
+  awaiting_verification
+  successful
+  failed
+  rejected
+}
+
+enum AnnouncementTarget {
+  all
+  batch
+  students
+}
+
+enum NotificationType {
+  approval
+  enrollment
+  new_note
+  announcement
+  fee_due
+  fee_overdue
+  payment_verified
+  payment_rejected
+  system
+}
+
+model Academy {
+  id              String        @id @default(cuid())
+  name            String
+  slug            String        @unique
+  logoUrl         String        @default("")
+  address         String        @default("")
+  contactNumber   String        @default("")
+  email           String        @default("")
+  description     String        @default("")
+  ownerName       String        @default("")
+  welcomeMessage  String        @default("Welcome to our academy!")
+  loginBanner     String        @default("")
+  dashboardBanner String        @default("")
+  primaryColor    String        @default("#2563eb")
+  accentColor     String        @default("#1e40af")
+  themeMode       String        @default("light")
+  upiId           String        @default("")
+  paymentQrUrl    String        @default("")
+  lateFeePerDay   Decimal       @default(0) @db.Decimal(10, 2)
+  gracePeriodDays Int           @default(5)
+  currency        String        @default("INR")
+  status          AcademyStatus @default(pending)
+  trialEndsAt     DateTime?
+  subscriptionPlan String       @default("trial")
+  subscriptionExpiresAt DateTime?
+  customDomain    String        @default("")
+  ownerUserId     String        @unique
+  owner           User          @relation("AcademyOwner", fields: [ownerUserId], references: [id])
+  users           User[]        @relation("AcademyUsers")
+  batches         Batch[]
+  enrollments     Enrollment[]
+  notes           Note[]
+  payments        Payment[]
+  announcements   Announcement[]
+  notifications   Notification[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([slug])
+}
+
+model User {
+  id              String       @id @default(cuid())
+  name            String
+  email           String
+  phone           String       @default("")
+  password        String
+  role            UserRole
+  status          UserStatus   @default(pending)
+  address         String       @default("")
+  profilePicUrl   String       @default("")
+  academicInfo    String       @default("")
+  guardian        String       @default("")
+  lastLogin       DateTime?
+  academyId       String?
+  academy         Academy?     @relation("AcademyUsers", fields: [academyId], references: [id])
+  ownedAcademy    Academy?     @relation("AcademyOwner")
+  enrollments     Enrollment[]
+  payments        Payment[]
+  announcementsCreated Announcement[]    @relation("AnnouncementCreator")
+  announcementsTargeted AnnouncementStudent[]
+  notifications   Notification[]
+  notesUploaded   Note[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([email, academyId])
+  @@index([academyId])
+}
+
+model Batch {
+  id              String        @id @default(cuid())
+  academyId       String
+  academy         Academy       @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  name            String
+  description     String        @default("")
+  subject         String        @default("")
+  startDate       DateTime?
+  endDate         DateTime?
+  schedule        Json          @default("[]")
+  monthlyFee      Decimal       @default(0) @db.Decimal(10, 2)
+  admissionFee    Decimal       @default(0) @db.Decimal(10, 2)
+  capacity        Int           @default(50)
+  status          BatchStatus   @default(active)
+  enrollments     Enrollment[]
+  notes           NoteBatch[]
+  payments        Payment[]
+  announcements   AnnouncementBatch[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([academyId])
+}
+
+model Enrollment {
+  id              String   @id @default(cuid())
+  academyId       String
+  academy         Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  studentId       String
+  student         User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  batchId         String
+  batch           Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  status          String   @default("active") // active | removed
+  monthlyFeeOverride Decimal? @db.Decimal(10, 2)
+  admissionFeeOverride Decimal? @db.Decimal(10, 2)
+  discount        Decimal? @db.Decimal(10, 2)
+  enrolledAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([studentId, batchId])
+  @@index([academyId])
+}
+
+model Note {
+  id                  String      @id @default(cuid())
+  academyId           String
+  academy             Academy     @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  folder              String      @default("General")
+  title               String
+  description         String      @default("")
+  fileUrl             String
+  storageKey          String      @default("")
+  fileSize            Int         @default(0)
+  mimeType            String      @default("application/pdf")
+  published           Boolean     @default(true)
+  recordingPermission Boolean     @default(false)
+  uploadedById        String?
+  uploadedBy          User?       @relation(fields: [uploadedById], references: [id])
+  batches             NoteBatch[]
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  @@index([academyId])
+}
+
+model NoteBatch {
+  noteId  String
+  batchId String
+  note    Note  @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  batch   Batch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, batchId])
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  academyId       String
+  academy         Academy       @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  studentId       String
+  student         User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  batchId         String?
+  batch           Batch?        @relation(fields: [batchId], references: [id])
+  amount          Decimal       @db.Decimal(10, 2)
+  type            PaymentType   @default(monthly)
+  forMonth        String?
+  dueDate         DateTime?
+  reference       String?       @unique
+  upiTxnId        String        @default("")
+  status          PaymentStatus @default(pending)
+  verifiedById    String?
+  verifiedAt      DateTime?
+  rejectionReason String        @default("")
+  receiptNo       String?
+  notes           String        @default("")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([academyId, studentId, forMonth])
+}
+
+model Announcement {
+  id          String             @id @default(cuid())
+  academyId   String
+  academy     Academy            @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  title       String
+  message     String
+  targetType  AnnouncementTarget @default(all)
+  batches     AnnouncementBatch[]
+  students    AnnouncementStudent[]
+  createdById String?
+  createdBy   User?              @relation("AnnouncementCreator", fields: [createdById], references: [id])
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([academyId])
+}
+
+model AnnouncementBatch {
+  announcementId String
+  batchId        String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  batch          Batch        @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@id([announcementId, batchId])
+}
+
+model AnnouncementStudent {
+  announcementId String
+  studentId      String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  student        User         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([announcementId, studentId])
+}
+
+model Notification {
+  id         String           @id @default(cuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  academyId  String?
+  academy    Academy?         @relation(fields: [academyId], references: [id])
+  title      String
+  message    String
+  type       NotificationType @default(system)
+  read       Boolean          @default(false)
+  link       String           @default("")
+  createdAt  DateTime         @default(now())
+
+  @@index([userId])
+}
+
+model Developer {
+  id          String   @id @default(cuid())
+  name        String   @default("The Developer")
+  photoUrl    String   @default("")
+  intro       String   @default("")
+  about       String   @default("")
+  skills      String[] @default([])
+  projects    Json     @default("[]")
+  email       String   @default("")
+  website     String   @default("")
+  github      String   @default("")
+  linkedin    String   @default("")
+  twitter     String   @default("")
+  instagram   String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  academyId String?
+  userId    String?
+  action    String
+  details   Json?
+  ip        String?
+  createdAt DateTime @default(now())
+}
