@@ -21,6 +21,7 @@ import TeacherStudents from './pages/teacher/TeacherStudents';
 import TeacherShare from './pages/teacher/TeacherShare';
 import TeacherBatches from './pages/teacher/TeacherBatches';
 import TeacherBatchDetail from './pages/teacher/TeacherBatchDetail';
+import TeacherStudentFees from './pages/teacher/TeacherStudentFees';
 import TeacherNotes from './pages/teacher/TeacherNotes';
 import TeacherPayments from './pages/teacher/TeacherPayments';
 import TeacherReports from './pages/teacher/TeacherReports';
@@ -96,6 +97,7 @@ export default function App() {
         <Route path="share" element={<TeacherShare />} />
         <Route path="batches" element={<TeacherBatches />} />
         <Route path="batches/:id" element={<TeacherBatchDetail />} />
+        <Route path="batches/:batchId/student/:studentId/fees" element={<TeacherStudentFees />} />
         <Route path="notes" element={<TeacherNotes />} />
         <Route path="payments" element={<TeacherPayments />} />
         <Route path="reports" element={<TeacherReports />} />

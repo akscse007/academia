@@ -2,11 +2,69 @@ import express from 'express';
 import { customAlphabet } from 'nanoid';
 import prisma from '../lib/prisma.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { buildSchedule, monthKey, monthLabel } from '../utils/feeSchedule.js';
 
 const router = express.Router();
 const nano = customAlphabet('ABCDEFGHJKMNPQRSTUVWXYZ23456789', 10);
 
 router.use(authenticate);
+
+// GET /api/payments/schedule?batchId=xxx&studentId=yyy
+// - Student may omit studentId (defaults to self)
+// - Teacher may specify studentId to inspect any enrolled student
+router.get('/schedule', async (req, res, next) => {
+  try {
+    const { batchId } = req.query;
+    if (!batchId) return res.status(400).json({ message: 'batchId required' });
+    const studentId =
+      req.user.role === 'teacher'
+        ? req.query.studentId
+        : req.user.id;
+    if (!studentId) return res.status(400).json({ message: 'studentId required' });
+
+    const batch = await prisma.batch.findFirst({
+      where: { id: batchId, academyId: req.user.academyId },
+    });
+    if (!batch) return res.status(404).json({ message: 'Batch not found' });
+    const enrollment = await prisma.enrollment.findFirst({
+      where: { studentId, batchId, status: 'active' },
+    });
+    if (!enrollment) return res.status(404).json({ message: 'Not enrolled' });
+
+    const payments = await prisma.payment.findMany({
+      where: { studentId, batchId, type: 'monthly' },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const student = await prisma.user.findUnique({
+      where: { id: studentId },
+      select: { id: true, name: true, email: true, phone: true },
+    });
+
+    const schedule = buildSchedule({ enrollment, batch, payments });
+
+    // Also include admission fee status
+    const admission = await prisma.payment.findFirst({
+      where: { studentId, batchId, type: 'admission', status: 'successful' },
+    });
+
+    res.json({
+      student,
+      batch: { id: batch.id, name: batch.name, subject: batch.subject, monthlyFee: batch.monthlyFee },
+      enrollment: {
+        id: enrollment.id,
+        enrolledAt: enrollment.enrolledAt,
+        monthlyFeeOverride: enrollment.monthlyFeeOverride,
+        admissionFeeOverride: enrollment.admissionFeeOverride,
+        discount: enrollment.discount,
+      },
+      admissionPaid: !!admission,
+      ...schedule,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.post('/initiate', async (req, res, next) => {
   try {
@@ -23,6 +81,25 @@ router.post('/initiate', async (req, res, next) => {
 
     const academy = await prisma.academy.findUnique({ where: { id: req.user.academyId } });
     if (!academy?.upiId) return res.status(400).json({ message: 'Academy has no UPI ID set' });
+
+    // Sequential-payment enforcement: for monthly payments the student may only
+    // pay the earliest unpaid month in their schedule. They cannot skip ahead.
+    if (type === 'monthly') {
+      const payments = await prisma.payment.findMany({
+        where: { studentId: req.user.id, batchId, type: 'monthly' },
+      });
+      const schedule = buildSchedule({ enrollment: enrolled, batch, payments });
+      if (!schedule.nextPayable) {
+        return res.status(400).json({ message: 'No monthly fee is due.' });
+      }
+      const targetMonth = forMonth || schedule.nextPayable.month;
+      if (targetMonth !== schedule.nextPayable.month) {
+        return res.status(400).json({
+          message: `Please pay for ${monthLabel(schedule.nextPayable.month)} first before paying later months.`,
+          nextPayable: schedule.nextPayable.month,
+        });
+      }
+    }
 
     let amount = overrideAmount ? Number(overrideAmount) : null;
     if (!amount) {
@@ -185,6 +262,75 @@ router.put('/:id/reject', requireRole('teacher'), async (req, res, next) => {
       },
     });
     res.json(p);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Teacher records a CASH payment on behalf of a student.
+// Immediately marks it as successful with a receipt number.
+router.post('/cash', requireRole('teacher'), async (req, res, next) => {
+  try {
+    const { studentId, batchId, forMonth, type = 'monthly', amount: overrideAmount, notes } = req.body;
+    if (!studentId || !batchId) return res.status(400).json({ message: 'studentId and batchId required' });
+    if (type === 'monthly' && !forMonth) return res.status(400).json({ message: 'forMonth required for monthly cash payment' });
+
+    const batch = await prisma.batch.findFirst({
+      where: { id: batchId, academyId: req.user.academyId },
+    });
+    if (!batch) return res.status(404).json({ message: 'Batch not found' });
+    const enrollment = await prisma.enrollment.findFirst({
+      where: { studentId, batchId, academyId: req.user.academyId, status: 'active' },
+    });
+    if (!enrollment) return res.status(404).json({ message: 'Student is not enrolled in this batch' });
+
+    // Prevent duplicate successful monthly payment
+    if (type === 'monthly') {
+      const dup = await prisma.payment.findFirst({
+        where: { studentId, batchId, forMonth, type: 'monthly', status: 'successful' },
+      });
+      if (dup) return res.status(409).json({ message: `Already paid for ${forMonth}`, payment: dup });
+    }
+
+    let amount = overrideAmount ? Number(overrideAmount) : null;
+    if (!amount) {
+      if (type === 'admission') amount = Number(enrollment.admissionFeeOverride ?? batch.admissionFee);
+      else amount = Number(enrollment.monthlyFeeOverride ?? batch.monthlyFee);
+      amount -= Number(enrollment.discount || 0);
+    }
+    if (!amount || amount <= 0) return res.status(400).json({ message: 'Amount invalid' });
+
+    const academy = await prisma.academy.findUnique({ where: { id: req.user.academyId } });
+    const reference = `${academy.slug.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)}-CASH-${nano()}`;
+
+    const payment = await prisma.payment.create({
+      data: {
+        academyId: req.user.academyId,
+        studentId,
+        batchId,
+        amount,
+        type,
+        forMonth: type === 'monthly' ? forMonth : null,
+        reference,
+        status: 'successful',
+        verifiedById: req.user.id,
+        verifiedAt: new Date(),
+        receiptNo: `RCPT-${nano()}`,
+        notes: notes ? `Cash: ${notes}` : 'Cash payment',
+      },
+    });
+
+    await prisma.notification.create({
+      data: {
+        userId: studentId,
+        academyId: req.user.academyId,
+        title: 'Cash payment recorded',
+        message: `Your teacher recorded a cash payment of ₹${amount}${type === 'monthly' ? ` for ${forMonth}` : ''}. Receipt: ${payment.receiptNo}`,
+        type: 'payment_verified',
+      },
+    });
+
+    res.status(201).json(payment);
   } catch (err) {
     next(err);
   }

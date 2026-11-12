@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../../api/client';
+import { Wallet, Trash2 } from 'lucide-react';
 
 export default function TeacherBatchDetail() {
   const { id } = useParams();
@@ -78,16 +79,29 @@ export default function TeacherBatchDetail() {
         <table className="w-full text-sm">
           <thead className="text-left text-xs uppercase text-slate-500">
             <tr>
-              <th className="py-2">Name</th><th className="py-2">Email</th><th className="py-2">Phone</th><th></th>
+              <th className="py-2">Name</th>
+              <th className="py-2 hidden sm:table-cell">Email</th>
+              <th className="py-2 hidden md:table-cell">Phone</th>
+              <th></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {enrolled.map((e) => (
               <tr key={e.id}>
                 <td className="py-2">{e.studentId?.name}</td>
-                <td className="py-2">{e.studentId?.email}</td>
-                <td className="py-2">{e.studentId?.phone}</td>
-                <td className="py-2 text-right"><button className="btn-danger text-xs" onClick={() => remove(e.studentId?.id)}>Remove</button></td>
+                <td className="py-2 hidden sm:table-cell">{e.studentId?.email}</td>
+                <td className="py-2 hidden md:table-cell">{e.studentId?.phone}</td>
+                <td className="py-2 text-right space-x-1 whitespace-nowrap">
+                  <Link
+                    to={`/app/batches/${batch.id}/student/${e.studentId?.id}/fees`}
+                    className="btn-outline text-xs inline-flex"
+                  >
+                    <Wallet className="h-3 w-3" /> Fees
+                  </Link>
+                  <button className="btn-danger text-xs" onClick={() => remove(e.studentId?.id)}>
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </td>
               </tr>
             ))}
             {!enrolled.length && <tr><td colSpan={4} className="py-6 text-center text-slate-500">No students enrolled yet.</td></tr>}
