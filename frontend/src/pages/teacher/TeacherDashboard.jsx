@@ -4,6 +4,7 @@ import StatCard from '../../components/StatCard';
 import { Users, UserCheck, BookOpen, FileText, Wallet, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import ShareLinks from '../../components/ShareLinks';
 
 export default function TeacherDashboard() {
   const { academy, user } = useAuth();
@@ -29,6 +30,8 @@ export default function TeacherDashboard() {
         <StatCard icon={Wallet} label="Collected" value={`₹${(stats.collected || 0).toLocaleString()}`} />
         <StatCard icon={AlertCircle} label="Outstanding" value={`₹${(stats.outstanding || 0).toLocaleString()}`} />
       </div>
+      <ShareLinks academy={academy} />
+
       <div className="card p-6">
         <h2 className="font-semibold mb-4">Monthly revenue — {new Date().getFullYear()}</h2>
         <div className="h-64">

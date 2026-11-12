@@ -38,7 +38,7 @@ router.post('/', requireRole('teacher'), async (req, res, next) => {
       subject: b.subject || '',
       monthlyFee: Number(b.monthlyFee || 0),
       admissionFee: Number(b.admissionFee || 0),
-      capacity: Number(b.capacity || 50),
+      capacity: b.capacity === '' || b.capacity == null ? null : Number(b.capacity),
       schedule: Array.isArray(b.schedule) ? b.schedule : [],
     };
     if (b.startDate) data.startDate = new Date(b.startDate);
@@ -62,7 +62,7 @@ router.put('/:id', requireRole('teacher'), async (req, res, next) => {
     for (const k of map) if (k in b) data[k] = b[k];
     if ('monthlyFee' in b) data.monthlyFee = Number(b.monthlyFee);
     if ('admissionFee' in b) data.admissionFee = Number(b.admissionFee);
-    if ('capacity' in b) data.capacity = Number(b.capacity);
+    if ('capacity' in b) data.capacity = b.capacity === '' || b.capacity == null ? null : Number(b.capacity);
     if ('startDate' in b) data.startDate = b.startDate ? new Date(b.startDate) : null;
     if ('endDate' in b) data.endDate = b.endDate ? new Date(b.endDate) : null;
     const updated = await prisma.batch.update({ where: { id: existing.id }, data });

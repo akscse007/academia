@@ -18,6 +18,7 @@ import PlatformLayout from './layouts/PlatformLayout';
 import TeacherLayout from './layouts/TeacherLayout';
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import TeacherStudents from './pages/teacher/TeacherStudents';
+import TeacherShare from './pages/teacher/TeacherShare';
 import TeacherBatches from './pages/teacher/TeacherBatches';
 import TeacherBatchDetail from './pages/teacher/TeacherBatchDetail';
 import TeacherNotes from './pages/teacher/TeacherNotes';
@@ -91,6 +92,7 @@ export default function App() {
       >
         <Route index element={<TeacherDashboard />} />
         <Route path="students" element={<TeacherStudents />} />
+        <Route path="share" element={<TeacherShare />} />
         <Route path="batches" element={<TeacherBatches />} />
         <Route path="batches/:id" element={<TeacherBatchDetail />} />
         <Route path="notes" element={<TeacherNotes />} />

@@ -9,7 +9,7 @@ export default function TeacherBatches() {
   const [list, setList] = useState([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
-    name: '', description: '', subject: '', monthlyFee: 0, admissionFee: 0, capacity: 50, startDate: ''
+    name: '', description: '', subject: '', monthlyFee: 0, admissionFee: 0, capacity: '', startDate: ''
   });
 
   const load = async () => {
@@ -24,7 +24,7 @@ export default function TeacherBatches() {
       await api.post('/batches', form);
       toast.success('Batch created');
       setOpen(false);
-      setForm({ name: '', description: '', subject: '', monthlyFee: 0, admissionFee: 0, capacity: 50, startDate: '' });
+      setForm({ name: '', description: '', subject: '', monthlyFee: 0, admissionFee: 0, capacity: '', startDate: '' });
       load();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed');
@@ -52,7 +52,7 @@ export default function TeacherBatches() {
             {b.subject && <p className="text-xs text-slate-500 mt-1">{b.subject}</p>}
             <div className="mt-4 flex justify-between text-sm">
               <div><span className="text-slate-500">Monthly</span> ₹{b.monthlyFee}</div>
-              <div><span className="text-slate-500">Enrolled</span> {b.enrolledCount || 0}/{b.capacity}</div>
+              <div><span className="text-slate-500">Enrolled</span> {b.enrolledCount || 0}{b.capacity ? `/${b.capacity}` : ''}</div>
             </div>
           </Link>
         ))}
@@ -84,8 +84,10 @@ export default function TeacherBatches() {
                 <input type="number" className="input" value={form.admissionFee} onChange={(e) => setForm({ ...form, admissionFee: +e.target.value })} />
               </div>
               <div>
-                <label className="label">Capacity</label>
-                <input type="number" className="input" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: +e.target.value })} />
+                <label className="label">Capacity (optional)</label>
+                <input type="number" min="1" className="input" placeholder="Unlimited"
+                  value={form.capacity}
+                  onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
               </div>
             </div>
             <div>

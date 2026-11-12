@@ -54,7 +54,7 @@ export default function TeacherBatchDetail() {
       <div className="grid md:grid-cols-4 gap-4">
         <div className="card p-5"><p className="text-xs uppercase text-slate-500">Monthly fee</p><p className="text-xl font-bold mt-1">₹{batch.monthlyFee}</p></div>
         <div className="card p-5"><p className="text-xs uppercase text-slate-500">Admission</p><p className="text-xl font-bold mt-1">₹{batch.admissionFee}</p></div>
-        <div className="card p-5"><p className="text-xs uppercase text-slate-500">Capacity</p><p className="text-xl font-bold mt-1">{enrolled.length}/{batch.capacity}</p></div>
+        <div className="card p-5"><p className="text-xs uppercase text-slate-500">Enrolled</p><p className="text-xl font-bold mt-1">{enrolled.length}{batch.capacity ? `/${batch.capacity}` : ''}</p>{!batch.capacity && <p className="text-xs text-slate-500 mt-1">No limit</p>}</div>
         <div className="card p-5"><p className="text-xs uppercase text-slate-500">Status</p><p className="text-xl font-bold mt-1 capitalize">{batch.status}</p></div>
       </div>
 

@@ -148,7 +148,7 @@ model Batch {
   schedule        Json          @default("[]")
   monthlyFee      Decimal       @default(0) @db.Decimal(10, 2)
   admissionFee    Decimal       @default(0) @db.Decimal(10, 2)
-  capacity        Int           @default(50)
+  capacity        Int?
   status          BatchStatus   @default(active)
   enrollments     Enrollment[]
   notes           NoteBatch[]

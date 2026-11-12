@@ -13,6 +13,14 @@ function generatePassword() {
   return pwdAlphabet();
 }
 
+function appOrigin(req) {
+  // Prefer explicit APP_URL in production (e.g. https://yourdomain.com).
+  // Else fall back to the request's origin header, else synthesise from the host.
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, '');
+  if (req.headers.origin) return req.headers.origin;
+  return `${req.protocol}://${req.get('host')}`;
+}
+
 function strip(u) {
   if (!u) return u;
   const { password, ...rest } = u;
@@ -100,7 +108,7 @@ router.post('/', async (req, res, next) => {
       credentials: {
         email: student.email,
         password: generatedPassword,
-        loginUrl: `${req.protocol}://${req.get('host').replace(/:\d+$/, ':5173')}/a/${req.academy.slug}/login`,
+        loginUrl: `${appOrigin(req)}/a/${req.academy.slug}/login`,
       },
     });
   } catch (err) {
@@ -168,7 +176,7 @@ router.post('/:id/reset-password', async (req, res, next) => {
     res.json({
       email: existing.email,
       password: newPassword,
-      loginUrl: `${req.protocol}://${req.get('host').replace(/:\d+$/, ':5173')}/a/${req.academy.slug}/login`,
+      loginUrl: `${appOrigin(req)}/a/${req.academy.slug}/login`,
     });
   } catch (err) {
     next(err);

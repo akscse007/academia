@@ -12,12 +12,14 @@ import {
   Megaphone,
   Palette,
   Settings,
+  Share2,
 } from 'lucide-react';
 
 export default function TeacherLayout() {
   const { academy } = useAuth();
   const items = [
     { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
+    { to: '/app/share', label: 'Share with students', icon: Share2 },
     { to: '/app/students', label: 'Students', icon: Users },
     { to: '/app/batches', label: 'Batches', icon: BookOpen },
     { to: '/app/notes', label: 'Study materials', icon: FileText },
