@@ -1,6 +1,17 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: '/api' });
+// In production (Vercel), set VITE_API_URL to your backend origin,
+// e.g. https://academia-ufst.onrender.com
+// In dev we leave it blank — Vite proxies /api and /uploads to :5000.
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`
+  : '/api';
+
+export const API_ORIGIN = import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL.replace(/\/$/, '')
+  : '';
+
+const api = axios.create({ baseURL: API_BASE });
 
 api.interceptors.request.use((cfg) => {
   const token = localStorage.getItem('token');

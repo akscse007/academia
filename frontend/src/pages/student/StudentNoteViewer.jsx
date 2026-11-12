@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
-import api from '../../api/client';
+import api, { API_ORIGIN } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -29,7 +29,7 @@ export default function StudentNoteViewer() {
   useEffect(() => {
     if (!note) return;
     const token = localStorage.getItem('token');
-    fetch(`/api/notes/${id}/stream`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API_ORIGIN}/api/notes/${id}/stream`, { headers: { Authorization: `Bearer ${token}` } })
       .then(async (r) => {
         if (!r.ok) throw new Error('Load failed');
         const buf = await r.arrayBuffer();
