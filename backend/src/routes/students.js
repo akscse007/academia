@@ -108,7 +108,7 @@ router.post('/', async (req, res, next) => {
       credentials: {
         email: student.email,
         password: generatedPassword,
-        loginUrl: `${appOrigin(req)}/#/a/${req.academy.slug}/login`,
+        loginUrl: `${appOrigin(req)}/a/${req.academy.slug}/login`,
       },
     });
   } catch (err) {
@@ -176,7 +176,7 @@ router.post('/:id/reset-password', async (req, res, next) => {
     res.json({
       email: existing.email,
       password: newPassword,
-      loginUrl: `${appOrigin(req)}/#/a/${req.academy.slug}/login`,
+      loginUrl: `${appOrigin(req)}/a/${req.academy.slug}/login`,
     });
   } catch (err) {
     next(err);

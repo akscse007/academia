@@ -5,6 +5,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 
 import prisma from './lib/prisma.js';
 import { notFound, errorHandler } from './middleware/error.js';
@@ -55,6 +57,31 @@ app.use('/api/announcements', announcementRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/developer', developerRoutes);
 app.use('/api/reports', reportRoutes);
+
+// ---- Serve built frontend from backend (single-service deployment) ----
+// Expects frontend built to <repo>/frontend/dist. Falls back silently when not built.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const frontendDist = path.resolve(__dirname, '../../frontend/dist');
+
+if (fs.existsSync(frontendDist)) {
+  console.log(`Serving frontend from ${frontendDist}`);
+  app.use(
+    express.static(frontendDist, {
+      index: false,
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('index.html')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+      },
+    })
+  );
+  // SPA fallback: any non-API GET returns index.html so React Router handles it
+  app.get(/^\/(?!api\/|uploads\/).*/, (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(frontendDist, 'index.html'));
+  });
+}
 
 app.use(notFound);
 app.use(errorHandler);

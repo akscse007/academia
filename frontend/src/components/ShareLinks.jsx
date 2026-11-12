@@ -7,23 +7,21 @@ export default function ShareLinks({ academy, compact = false }) {
   if (!academy) return null;
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  // HashRouter is used so the app works on any static host without SPA rewrites.
-  // All public URLs include `/#/` before the route path.
   const links = {
     register: {
       label: 'Student registration',
       hint: 'Share with new students so they can sign up themselves. Needs your approval before access.',
-      url: `${origin}/#/a/${academy.slug}/register`,
+      url: `${origin}/a/${academy.slug}/register`,
     },
     login: {
       label: 'Student login',
       hint: 'Already-registered students sign in here. Fully branded with your academy name and colours.',
-      url: `${origin}/#/a/${academy.slug}/login`,
+      url: `${origin}/a/${academy.slug}/login`,
     },
     home: {
       label: 'Academy home (login or register)',
       hint: 'A single branded entry — students pick login or sign up.',
-      url: `${origin}/#/a/${academy.slug}/login`,
+      url: `${origin}/a/${academy.slug}/login`,
     },
   };
   const active = links[tab];

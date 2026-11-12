@@ -24,8 +24,17 @@ api.interceptors.response.use(
   (err) => {
     const status = err.response?.status;
     if (status === 401) {
-      localStorage.removeItem('token');
-      if (!location.pathname.startsWith('/login') && !location.pathname.startsWith('/a/')) {
+      const p = location.pathname || '/';
+      const isPublicRoute =
+        p === '/' ||
+        p.startsWith('/login') ||
+        p.startsWith('/a/') ||
+        p.startsWith('/register-academy') ||
+        p.startsWith('/about-developer');
+      // On a public page, let the UI handle the error (toast etc.) — do NOT wipe
+      // the token or navigate; that caused the "always re-login" loop.
+      if (!isPublicRoute) {
+        localStorage.removeItem('token');
         location.href = '/login';
       }
     }
