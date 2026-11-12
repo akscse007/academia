@@ -3,6 +3,7 @@ import { customAlphabet } from 'nanoid';
 import prisma from '../lib/prisma.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { buildSchedule, monthKey, monthLabel } from '../utils/feeSchedule.js';
+import { memoryImageUploader, fileToDataUrl } from '../middleware/upload.js';
 
 const router = express.Router();
 const nano = customAlphabet('ABCDEFGHJKMNPQRSTUVWXYZ23456789', 10);
@@ -112,24 +113,54 @@ router.post('/initiate', async (req, res, next) => {
     }
     if (!amount || amount <= 0) return res.status(400).json({ message: 'No fee configured' });
 
-    // NPCI UPI spec: `tr` (transaction reference) must be alphanumeric A-Z 0-9
-    // only, max 35 chars. NO hyphens, slashes or special chars — Google Pay /
-    // PhonePe silently reject these with a generic "check bank limits" error.
-    const slugCode = academy.slug.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'ACADEMY';
-    const reference = `${slugCode}${nano()}`.replace(/[^A-Z0-9]/gi, '').slice(0, 35);
+    const resolvedMonth = type === 'monthly' ? (forMonth || new Date().toISOString().slice(0, 7)) : null;
 
-    const payment = await prisma.payment.create({
-      data: {
+    // Dedupe: if this student already has an open Payment row for the same
+    // (batch, month, type) in a reusable state (pending or awaiting_verification
+    // that hasn't had a txn id submitted yet), reuse it instead of creating a
+    // new one. This prevents the "spam pending rows" problem when a student
+    // taps "Pay now" several times.
+    let payment = await prisma.payment.findFirst({
+      where: {
         academyId: academy.id,
         studentId: req.user.id,
         batchId: batch.id,
         type,
-        amount,
-        forMonth: forMonth || new Date().toISOString().slice(0, 7),
-        reference,
+        forMonth: type === 'monthly' ? resolvedMonth : null,
         status: 'pending',
       },
+      orderBy: { createdAt: 'desc' },
     });
+
+    let reference;
+    if (payment) {
+      reference = payment.reference;
+      // Keep amount in sync in case teacher changed the fee
+      if (Number(payment.amount) !== amount) {
+        payment = await prisma.payment.update({
+          where: { id: payment.id },
+          data: { amount },
+        });
+      }
+    } else {
+      // NPCI UPI spec: `tr` must be alphanumeric A-Z 0-9 only, max 35 chars.
+      // NO hyphens, slashes or special chars — Google Pay / PhonePe silently
+      // reject these with a generic "check bank limits" error.
+      const slugCode = academy.slug.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'ACADEMY';
+      reference = `${slugCode}${nano()}`.replace(/[^A-Z0-9]/gi, '').slice(0, 35);
+      payment = await prisma.payment.create({
+        data: {
+          academyId: academy.id,
+          studentId: req.user.id,
+          batchId: batch.id,
+          type,
+          amount,
+          forMonth: resolvedMonth,
+          reference,
+          status: 'pending',
+        },
+      });
+    }
 
     // Build a strictly spec-compliant UPI intent URL.
     // - pn / tn: alphanumeric + space only, trimmed
@@ -167,6 +198,32 @@ router.post('/initiate', async (req, res, next) => {
   }
 });
 
+// Student uploads a screenshot of their UPI payment confirmation
+router.post(
+  '/:id/screenshot',
+  memoryImageUploader(3).single('file'),
+  async (req, res, next) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: 'No file' });
+      const existing = await prisma.payment.findFirst({
+        where: { id: req.params.id, studentId: req.user.id },
+      });
+      if (!existing) return res.status(404).json({ message: 'Not found' });
+      if (existing.status === 'successful') {
+        return res.status(400).json({ message: 'Payment already verified' });
+      }
+      const dataUrl = fileToDataUrl(req.file);
+      const p = await prisma.payment.update({
+        where: { id: existing.id },
+        data: { screenshotUrl: dataUrl },
+      });
+      res.json({ screenshotUrl: p.screenshotUrl });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 router.post('/:id/submit-txn', async (req, res, next) => {
   try {
     const existing = await prisma.payment.findFirst({
@@ -186,11 +243,48 @@ router.post('/:id/submit-txn', async (req, res, next) => {
         userId: academy.ownerUserId,
         academyId: p.academyId,
         title: 'Payment awaiting verification',
-        message: `${req.user.name} submitted txn ${p.upiTxnId} for ${p.amount}`,
+        message: `${req.user.name} submitted ${p.upiTxnId ? `txn ${p.upiTxnId}` : 'a payment screenshot'} for ${p.amount}`,
         type: 'system',
       },
     });
     res.json(p);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Student cancels a pending payment (removes it instead of leaving spam)
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const existing = await prisma.payment.findFirst({
+      where: { id: req.params.id, studentId: req.user.id },
+    });
+    if (!existing) return res.status(404).json({ message: 'Not found' });
+    if (existing.status !== 'pending') {
+      return res.status(400).json({ message: 'Only pending payments can be cancelled' });
+    }
+    await prisma.payment.delete({ where: { id: existing.id } });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Teacher — bulk cleanup of stale pending rows older than N hours (default 2)
+router.post('/cleanup-pending', requireRole('teacher'), async (req, res, next) => {
+  try {
+    const hours = Number(req.query.hours || req.body?.hours || 2);
+    const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+    const { count } = await prisma.payment.deleteMany({
+      where: {
+        academyId: req.user.academyId,
+        status: 'pending',
+        upiTxnId: '',
+        screenshotUrl: '',
+        createdAt: { lt: cutoff },
+      },
+    });
+    res.json({ removed: count });
   } catch (err) {
     next(err);
   }

@@ -225,6 +225,7 @@ model Payment {
   dueDate         DateTime?
   reference       String?       @unique
   upiTxnId        String        @default("")
+  screenshotUrl   String        @default("")
   status          PaymentStatus @default(pending)
   verifiedById    String?
   verifiedAt      DateTime?
