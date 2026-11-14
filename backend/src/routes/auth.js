@@ -39,19 +39,26 @@ function publicAcademy(a) {
 // Register a new teacher + academy
 router.post('/register-academy', async (req, res, next) => {
   try {
-    const {
+    let {
       name, email, phone, password,
       academyName, address, contactNumber, academyEmail,
       description, welcomeMessage, primaryColor, upiId,
     } = req.body;
+    email = String(email || '').trim().toLowerCase();
+    password = String(password || '');
+    name = String(name || '').trim();
+    academyName = String(academyName || '').trim();
     if (!name || !email || !password || !academyName) {
-      return res.status(400).json({ message: 'Missing required fields' });
+      return res.status(400).json({ message: 'Name, email, password and academy name are required' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
 
     const existingTeacher = await prisma.user.findFirst({
-      where: { email: email.toLowerCase(), role: 'teacher' },
+      where: { email, role: 'teacher' },
     });
-    if (existingTeacher) return res.status(409).json({ message: 'Email already registered' });
+    if (existingTeacher) return res.status(409).json({ message: 'Email already registered as a teacher' });
 
     const slug = await uniqueSlug(academyName);
     const hashed = await hashPassword(password);
@@ -107,13 +114,19 @@ router.post('/register-student/:slug', async (req, res, next) => {
     if (!academy || academy.status !== 'active') {
       return res.status(404).json({ message: 'Academy not available' });
     }
-    const { name, email, phone, password, address, academicInfo, guardian } = req.body;
+    let { name, email, phone, password, address, academicInfo, guardian } = req.body;
+    email = String(email || '').trim().toLowerCase();
+    password = String(password || '');
+    name = String(name || '').trim();
     if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Missing required fields' });
+      return res.status(400).json({ message: 'Name, email and password are required' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
 
     const exists = await prisma.user.findUnique({
-      where: { email_academyId: { email: email.toLowerCase(), academyId: academy.id } },
+      where: { email_academyId: { email, academyId: academy.id } },
     });
     if (exists) return res.status(409).json({ message: 'Email already registered for this academy' });
 
@@ -153,21 +166,27 @@ router.post('/register-student/:slug', async (req, res, next) => {
 // Login (owner / teacher / student)
 router.post('/login', async (req, res, next) => {
   try {
-    const { email, password, academySlug, role } = req.body;
-    if (!email || !password) return res.status(400).json({ message: 'Missing credentials' });
+    let { email, password, academySlug, role } = req.body;
+    email = String(email || '').trim().toLowerCase();
+    password = String(password || '');
+    if (!email || !password) return res.status(400).json({ message: 'Email and password are required' });
 
     let academy = null;
-    const where = { email: email.toLowerCase() };
+    const where = { email };
     if (role) where.role = role;
 
     if (academySlug) {
-      academy = await prisma.academy.findUnique({ where: { slug: academySlug.toLowerCase() } });
+      academy = await prisma.academy.findUnique({
+        where: { slug: String(academySlug).trim().toLowerCase() },
+      });
       if (!academy) return res.status(404).json({ message: 'Academy not found' });
       where.academyId = academy.id;
     }
 
     const candidates = await prisma.user.findMany({ where, take: 5 });
-    if (!candidates.length) return res.status(401).json({ message: 'Invalid credentials' });
+    if (!candidates.length) {
+      return res.status(401).json({ message: 'No account found with that email for this role.' });
+    }
 
     let matched = null;
     for (const u of candidates) {
@@ -176,7 +195,7 @@ router.post('/login', async (req, res, next) => {
         break;
       }
     }
-    if (!matched) return res.status(401).json({ message: 'Invalid credentials' });
+    if (!matched) return res.status(401).json({ message: 'Wrong password. Please try again.' });
 
     if (matched.status === 'pending') return res.status(403).json({ message: 'Account awaiting approval' });
     if (matched.status === 'suspended' || matched.status === 'rejected') {

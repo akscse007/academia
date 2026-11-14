@@ -28,6 +28,10 @@ import TeacherReports from './pages/teacher/TeacherReports';
 import TeacherAnnouncements from './pages/teacher/TeacherAnnouncements';
 import TeacherBranding from './pages/teacher/TeacherBranding';
 import TeacherSettings from './pages/teacher/TeacherSettings';
+import TeacherAttendance from './pages/teacher/TeacherAttendance';
+import TeacherExams from './pages/teacher/TeacherExams';
+import TeacherExamEdit from './pages/teacher/TeacherExamEdit';
+import TeacherExamResults from './pages/teacher/TeacherExamResults';
 
 import StudentLayout from './layouts/StudentLayout';
 import StudentDashboard from './pages/student/StudentDashboard';
@@ -38,6 +42,10 @@ import StudentNoteViewer from './pages/student/StudentNoteViewer';
 import StudentFees from './pages/student/StudentFees';
 import StudentAnnouncements from './pages/student/StudentAnnouncements';
 import StudentProfile from './pages/student/StudentProfile';
+import StudentAttendance from './pages/student/StudentAttendance';
+import StudentExams from './pages/student/StudentExams';
+import StudentExamTake from './pages/student/StudentExamTake';
+import StudentExamResult from './pages/student/StudentExamResult';
 
 function RequireAuth({ role, children }) {
   const { user, loading } = useAuth();
@@ -98,6 +106,10 @@ export default function App() {
         <Route path="batches" element={<TeacherBatches />} />
         <Route path="batches/:id" element={<TeacherBatchDetail />} />
         <Route path="batches/:batchId/student/:studentId/fees" element={<TeacherStudentFees />} />
+        <Route path="attendance" element={<TeacherAttendance />} />
+        <Route path="exams" element={<TeacherExams />} />
+        <Route path="exams/:id" element={<TeacherExamEdit />} />
+        <Route path="exams/:id/results" element={<TeacherExamResults />} />
         <Route path="notes" element={<TeacherNotes />} />
         <Route path="payments" element={<TeacherPayments />} />
         <Route path="reports" element={<TeacherReports />} />
@@ -120,6 +132,10 @@ export default function App() {
         <Route path="batches/:id" element={<StudentBatchDetail />} />
         <Route path="notes" element={<StudentNotes />} />
         <Route path="notes/:id" element={<StudentNoteViewer />} />
+        <Route path="attendance" element={<StudentAttendance />} />
+        <Route path="exams" element={<StudentExams />} />
+        <Route path="exams/:id" element={<StudentExamTake />} />
+        <Route path="exams/:id/result" element={<StudentExamResult />} />
         <Route path="fees" element={<StudentFees />} />
         <Route path="announcements" element={<StudentAnnouncements />} />
         <Route path="profile" element={<StudentProfile />} />

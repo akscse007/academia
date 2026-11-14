@@ -34,7 +34,13 @@ export function AuthProvider({ children }) {
   }, [refresh]);
 
   const login = async ({ email, password, academySlug, role }) => {
-    const { data } = await api.post('/auth/login', { email, password, academySlug, role });
+    const payload = {
+      email: String(email || '').trim(),
+      password: String(password || ''),
+      academySlug: academySlug ? String(academySlug).trim() : undefined,
+      role,
+    };
+    const { data } = await api.post('/auth/login', payload);
     localStorage.setItem('token', data.token);
     setUser(data.user);
     setAcademy(data.academy);

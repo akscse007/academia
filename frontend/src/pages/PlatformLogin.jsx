@@ -1,15 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { GraduationCap } from 'lucide-react';
+import PasswordInput from '../components/PasswordInput';
 
 export default function PlatformLogin() {
-  const { login } = useAuth();
+  const { login, logout, user } = useAuth();
   const nav = useNavigate();
   const [mode, setMode] = useState('owner');
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+
+  // If already signed in, send them to their dashboard instead of showing login.
+  useEffect(() => {
+    if (user?.role === 'platform_owner') nav('/platform', { replace: true });
+    else if (user?.role === 'teacher') nav('/app', { replace: true });
+  }, [user, nav]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -61,15 +68,18 @@ export default function PlatformLogin() {
             <div>
               <label className="label">Email</label>
               <input
-                required type="email" className="input"
-                value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                required type="email" className="input" autoComplete="username"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onBlur={(e) => setForm({ ...form, email: e.target.value.trim() })}
               />
             </div>
             <div>
               <label className="label">Password</label>
-              <input
-                required type="password" className="input"
-                value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
+              <PasswordInput
+                required
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
               />
             </div>
             <button className="btn-primary w-full" disabled={loading}>

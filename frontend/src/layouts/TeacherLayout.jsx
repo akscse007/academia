@@ -13,6 +13,8 @@ import {
   Palette,
   Settings,
   Share2,
+  CalendarCheck,
+  FileQuestion,
 } from 'lucide-react';
 
 export default function TeacherLayout() {
@@ -22,6 +24,8 @@ export default function TeacherLayout() {
     { to: '/app/share', label: 'Share with students', icon: Share2 },
     { to: '/app/students', label: 'Students', icon: Users },
     { to: '/app/batches', label: 'Batches', icon: BookOpen },
+    { to: '/app/attendance', label: 'Attendance', icon: CalendarCheck },
+    { to: '/app/exams', label: 'Exams & tests', icon: FileQuestion },
     { to: '/app/notes', label: 'Study materials', icon: FileText },
     { to: '/app/payments', label: 'Fees & payments', icon: Wallet },
     { to: '/app/reports', label: 'Financial reports', icon: BarChart3 },

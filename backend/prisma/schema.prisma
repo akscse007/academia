@@ -66,6 +66,25 @@ enum NotificationType {
   system
 }
 
+enum AttendanceStatus {
+  present
+  absent
+  late
+  excused
+}
+
+enum ExamStatus {
+  draft
+  published
+  closed
+}
+
+enum QuestionType {
+  mcq
+  truefalse
+  short
+}
+
 model Academy {
   id              String        @id @default(cuid())
   name            String
@@ -101,6 +120,8 @@ model Academy {
   payments        Payment[]
   announcements   Announcement[]
   notifications   Notification[]
+  attendances     Attendance[]
+  exams           Exam[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -129,6 +150,8 @@ model User {
   announcementsTargeted AnnouncementStudent[]
   notifications   Notification[]
   notesUploaded   Note[]
+  attendanceRecords Attendance[]  @relation("StudentAttendance")
+  examAttempts    ExamAttempt[]   @relation("StudentExamAttempts")
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -154,6 +177,8 @@ model Batch {
   notes           NoteBatch[]
   payments        Payment[]
   announcements   AnnouncementBatch[]
+  attendances     Attendance[]
+  exams           ExamBatch[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -315,4 +340,93 @@ model ActivityLog {
   details   Json?
   ip        String?
   createdAt DateTime @default(now())
+}
+
+model Attendance {
+  id         String           @id @default(cuid())
+  academyId  String
+  academy    Academy          @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  batchId    String
+  batch      Batch            @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  studentId  String
+  student    User             @relation("StudentAttendance", fields: [studentId], references: [id], onDelete: Cascade)
+  date       DateTime         @db.Date
+  status     AttendanceStatus @default(present)
+  note       String           @default("")
+  markedById String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([batchId, date, studentId])
+  @@index([academyId])
+  @@index([studentId])
+  @@index([batchId, date])
+}
+
+model Exam {
+  id              String        @id @default(cuid())
+  academyId       String
+  academy         Academy       @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  title           String
+  description     String        @default("")
+  instructions    String        @default("")
+  durationMinutes Int           @default(30)
+  startsAt        DateTime
+  endsAt          DateTime
+  totalMarks      Int           @default(0)
+  status          ExamStatus    @default(draft)
+  shuffle         Boolean       @default(false)
+  createdById     String?
+  batches         ExamBatch[]
+  questions       Question[]
+  attempts        ExamAttempt[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([academyId])
+}
+
+model ExamBatch {
+  examId  String
+  batchId String
+  exam    Exam  @relation(fields: [examId], references: [id], onDelete: Cascade)
+  batch   Batch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@id([examId, batchId])
+}
+
+model Question {
+  id           String       @id @default(cuid())
+  examId       String
+  exam         Exam         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  order        Int          @default(0)
+  type         QuestionType @default(mcq)
+  text         String
+  options      Json         @default("[]")
+  correctIndex Int?
+  correctText  String       @default("")
+  marks        Int          @default(1)
+  createdAt    DateTime     @default(now())
+
+  @@index([examId])
+}
+
+model ExamAttempt {
+  id          String    @id @default(cuid())
+  examId      String
+  exam        Exam      @relation(fields: [examId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     User      @relation("StudentExamAttempts", fields: [studentId], references: [id], onDelete: Cascade)
+  startedAt   DateTime  @default(now())
+  submittedAt DateTime?
+  score       Int       @default(0)
+  maxScore    Int       @default(0)
+  autoScored  Boolean   @default(true)
+  status      String    @default("in_progress")
+  answers     Json      @default("[]")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([examId, studentId])
+  @@index([examId])
 }

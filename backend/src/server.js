@@ -23,6 +23,8 @@ import announcementRoutes from './routes/announcements.js';
 import notificationRoutes from './routes/notifications.js';
 import developerRoutes from './routes/developer.js';
 import reportRoutes from './routes/reports.js';
+import attendanceRoutes from './routes/attendance.js';
+import examRoutes from './routes/exams.js';
 
 const app = express();
 
@@ -57,6 +59,8 @@ app.use('/api/announcements', announcementRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/developer', developerRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/attendance', attendanceRoutes);
+app.use('/api/exams', examRoutes);
 
 // ---- Serve built frontend from backend (single-service deployment) ----
 // Expects frontend built to <repo>/frontend/dist. Falls back silently when not built.

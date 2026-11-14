@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useBranding } from '../context/BrandingContext';
 import Loader from '../components/Loader';
 import { assetUrl } from '../utils/assetUrl';
+import PasswordInput from '../components/PasswordInput';
 
 export default function AcademyLogin() {
   const { slug } = useParams();
@@ -62,13 +63,16 @@ export default function AcademyLogin() {
           <form onSubmit={submit} className="mt-6 space-y-4">
             <div>
               <label className="label">Email</label>
-              <input required type="email" className="input"
-                value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              <input required type="email" className="input" autoComplete="username"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onBlur={(e) => setForm({ ...form, email: e.target.value.trim() })} />
             </div>
             <div>
               <label className="label">Password</label>
-              <input required type="password" className="input"
-                value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+              <PasswordInput required
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })} />
             </div>
             <button className="btn-primary w-full" disabled={loading}>
               {loading ? 'Signing in…' : 'Sign in'}
